@@ -8,8 +8,15 @@ export default function CreatorDashboard() {
     const [eventForm, setEventForm] = useState({ title: '', description: '', category: 'Party', venue_name: '', city: 'Port Harcourt', start_time: '' });
     const [tierForm, setTierForm] = useState({ event_id: '', name: '', description: '', price: '', total_capacity: '' });
 
+    const authHeaders = () => ({
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('vybes_token')}`
+    });
+
     const fetchEvents = () => {
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/events`)
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/events/mine`, {
+            headers: authHeaders()
+        })
             .then((res) => res.json())
             .then((data) => {
                 if (data.status === 'success') {
@@ -25,7 +32,7 @@ export default function CreatorDashboard() {
     const handleCreateEvent = async (e) => {
         e.preventDefault();
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/events`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(eventForm),
+            method: 'POST', headers: authHeaders(), body: JSON.stringify(eventForm),
         });
         if (res.ok) { alert('Event published successfully.'); fetchEvents(); }
     };
@@ -33,15 +40,13 @@ export default function CreatorDashboard() {
     const handleCreateTier = async (e) => {
         e.preventDefault();
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/events/${tierForm.event_id}/tiers`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...tierForm, price: Number(tierForm.price), total_capacity: Number(tierForm.total_capacity) }),
+            method: 'POST', headers: authHeaders(), body: JSON.stringify({ ...tierForm, price: Number(tierForm.price), total_capacity: Number(tierForm.total_capacity) }),
         });
         if (res.ok) { alert('Tier added successfully.'); fetchEvents(); }
     };
 
     const totalTicketsSold = events.reduce((acc, ev) => acc + (ev.tiers?.reduce((tAcc, t) => tAcc + Number(t.quantity_sold || 0), 0) || 0), 0);
     const totalRevenue = events.reduce((acc, ev) => acc + (ev.tiers?.reduce((tAcc, t) => tAcc + (Number(t.quantity_sold || 0) * Number(t.price || 0)), 0) || 0), 0);
-
-    //if (loading) return <div className="min-h-screen bg-black text-white flex items-center justify-center">Loading Studio...</div>;
 
     return (
         <main className="min-h-screen bg-[#050505] text-white p-6 md:p-12 font-sans relative">

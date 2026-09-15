@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { Html5Qrcode } from 'html5-qrcode';
 
 export default function GateScannerPage() {
@@ -8,6 +9,17 @@ export default function GateScannerPage() {
     const [loading, setLoading] = useState(false);
     const [cameraActive, setCameraActive] = useState(false);
     const scannerInstanceRef = useRef(null);
+    const router = useRouter();
+
+    // Gate access: scanners (and hosts) must be logged in to use this page,
+    // since /api/v1/tickets/verify now requires a valid token.
+    useEffect(() => {
+        const token = localStorage.getItem('vybes_token');
+        const role = localStorage.getItem('vybes_user_role');
+        if (!token || (role !== 'SCANNER' && role !== 'HOST')) {
+            router.push('/login');
+        }
+    }, [router]);
 
     const handleVerifyCode = async (targetCode) => {
         const cleanCode = targetCode.trim().toUpperCase();
@@ -16,12 +28,20 @@ export default function GateScannerPage() {
         try {
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/tickets/verify`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${localStorage.getItem('vybes_token')}`
+                },
                 // check_in: true is required, otherwise the backend only performs
                 // a read-only lookup and never flips is_used to TRUE.
                 body: JSON.stringify({ ticket_code: cleanCode, check_in: true }),
             });
             const data = await res.json();
+
+            if (res.status === 401 || res.status === 403) {
+                setResult({ ok: false, message: data.message || 'Not authorized to scan this ticket.' });
+                return;
+            }
 
             // Backend shape: { status, message, data }
             // Normalize into what the UI expects: { ok, message, ticket, tier }

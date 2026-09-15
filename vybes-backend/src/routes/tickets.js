@@ -3,10 +3,13 @@ const router = express.Router();
 const db = require('../db');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
+const { requireAuth, requireRole } = require('../middleware/authMiddleware');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key';
 
-router.post('/verify', async (req, res) => {
+// PROTECTED: only logged-in scanners or hosts can verify/check in tickets.
+// Previously open to anyone — no login required to check in tickets for any event.
+router.post('/verify', requireAuth, requireRole('SCANNER', 'HOST'), async (req, res) => {
     const { ticket_code, qr_hash, check_in } = req.body;
     if (!ticket_code && !qr_hash) {
         return res.status(400).json({ status: 'error', message: 'ticket_code or qr_hash is required' });
@@ -24,7 +27,7 @@ router.post('/verify', async (req, res) => {
         }
 
         const result = await db.query(
-            `SELECT t.*, tt.name AS tier_name, e.title AS event_title 
+            `SELECT t.*, tt.name AS tier_name, e.title AS event_title, e.host_id AS event_host_id
              FROM tickets t 
              JOIN ticket_tiers tt ON t.tier_id = tt.id 
              JOIN events e ON tt.event_id = e.id 
@@ -37,6 +40,13 @@ router.post('/verify', async (req, res) => {
         }
 
         const ticket = result.rows[0];
+
+        // A scanner belongs to one host (req.user.host_id); a host's own id is their host scope.
+        // Reject if this ticket's event doesn't belong to the scanner/host making the request.
+        const effectiveHostId = req.user.role === 'HOST' ? req.user.id : req.user.host_id;
+        if (ticket.event_host_id !== effectiveHostId) {
+            return res.status(403).json({ status: 'error', message: 'This ticket does not belong to one of your events' });
+        }
 
         if (ticket.is_used) {
             return res.status(409).json({

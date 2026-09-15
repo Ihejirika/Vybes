@@ -24,12 +24,13 @@ router.post('/register', async (req, res) => {
         const displayName = name || email.split('@')[0];
 
         const newUser = await db.query(
-            `INSERT INTO users (name, email, password_hash, role) VALUES ($1, $2, $3, $4) RETURNING id, name, email, role`,
+            `INSERT INTO users (name, email, password_hash, role) VALUES ($1, $2, $3, $4) RETURNING id, name, email, role, host_id`,
             [displayName, email, passwordHash, assignedRole]
         );
 
         const user = newUser.rows[0];
-        const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+        // host_id is included so scanner tokens carry which host they belong to (null for HOST/ATTENDEE accounts)
+        const token = jwt.sign({ id: user.id, email: user.email, role: user.role, host_id: user.host_id || null }, JWT_SECRET, { expiresIn: '7d' });
 
         res.status(201).json({ status: 'success', message: 'Registration successful', token, user });
     } catch (error) {
@@ -56,7 +57,7 @@ router.post('/login', async (req, res) => {
             return res.status(400).json({ status: 'error', message: 'Invalid email or password' });
         }
 
-        const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+        const token = jwt.sign({ id: user.id, email: user.email, role: user.role, host_id: user.host_id || null }, JWT_SECRET, { expiresIn: '7d' });
 
         res.status(200).json({ status: 'success', token, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
     } catch (error) {

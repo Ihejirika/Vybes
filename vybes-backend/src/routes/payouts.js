@@ -1,7 +1,10 @@
 const express = require('express');
 const router = express.Router();
+const { requireAuth, requireRole } = require('../middleware/authMiddleware');
 
-router.get('/banks', async (req, res) => {
+// PROTECTED: only logged-in hosts can query bank lists / resolve accounts.
+// Previously open to anyone, which let unauthenticated requests burn your Paystack API quota.
+router.get('/banks', requireAuth, requireRole('HOST'), async (req, res) => {
     try {
         const response = await fetch('https://api.paystack.co/bank?currency=NGN', {
             headers: {
@@ -16,7 +19,7 @@ router.get('/banks', async (req, res) => {
     }
 });
 
-router.post('/resolve', async (req, res) => {
+router.post('/resolve', requireAuth, requireRole('HOST'), async (req, res) => {
     const { account_number, bank_code } = req.body;
     if (!account_number || !bank_code) {
         return res.status(400).json({ status: 'error', message: 'Account number and bank code are required' });

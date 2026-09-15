@@ -5,7 +5,7 @@ const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
     port: 587,
     secure: false,
-    requireTLS: true,
+    requireTLS: false,
     family: 4, // force IPv4 — avoids Railway's IPv6 egress issue
     auth: {
         user: process.env.MAIL_USER,

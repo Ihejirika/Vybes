@@ -2,7 +2,10 @@ const nodemailer = require('nodemailer');
 require('dotenv').config();
 
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
+    family: 4, // force IPv4 — avoids Railway's IPv6 egress issue
     auth: {
         user: process.env.MAIL_USER,
         pass: process.env.MAIL_PASS

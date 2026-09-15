@@ -90,7 +90,7 @@ router.post('/initialize', async (req, res) => {
             res.status(200).json({ status: 'success', authorization_url: paystackData.data.authorization_url, orderId });
         } catch (innerError) {
             await db.query(`UPDATE ticket_tiers SET quantity_sold = GREATEST(quantity_sold - 1, 0) WHERE id = $1`, [tier_id]);
-            await db.query(`UPDATE orders SET status = 'FAILED' WHERE id = $1`, [orderId]).catch(() => {});
+            await db.query(`UPDATE orders SET status = 'FAILED' WHERE id = $1`, [orderId]).catch(() => { });
             throw innerError;
         }
     } catch (error) {

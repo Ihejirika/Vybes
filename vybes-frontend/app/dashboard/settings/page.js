@@ -31,9 +31,17 @@ export default function SettingsPage() {
 
     const getApiUrl = () => process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
+    // Every protected call needs this now that the backend requires auth
+    const authHeaders = () => ({
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('vybes_token')}`
+    });
+
     const fetchScanners = async () => {
         try {
-            const res = await fetch(`${getApiUrl()}/api/v1/scanners`);
+            const res = await fetch(`${getApiUrl()}/api/v1/scanners`, {
+                headers: authHeaders()
+            });
             if (res.ok) {
                 const data = await res.json();
                 if (data.data) setScanners(data.data);
@@ -47,7 +55,9 @@ export default function SettingsPage() {
         setFullName(localStorage.getItem('vybes_user_name') || '');
         setEmail(localStorage.getItem('vybes_user_email') || '');
 
-        fetch(`${getApiUrl()}/api/v1/payouts/banks`)
+        fetch(`${getApiUrl()}/api/v1/payouts/banks`, {
+            headers: authHeaders()
+        })
             .then((res) => res.json())
             .then((data) => {
                 if (data.data && Array.isArray(data.data) && data.data.length > 0) setBanks(data.data);
@@ -61,7 +71,7 @@ export default function SettingsPage() {
             setResolving(true);
             fetch(`${getApiUrl()}/api/v1/payouts/resolve`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: authHeaders(),
                 body: JSON.stringify({ account_number: accountNumber, bank_code: bankCode }),
             })
                 .then((res) => res.json())
@@ -96,7 +106,7 @@ export default function SettingsPage() {
         try {
             const res = await fetch(`${getApiUrl()}/api/v1/scanners`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: authHeaders(),
                 body: JSON.stringify({ name: scannerName, email: scannerEmail, password: scannerPassword }),
             });
             if (res.ok) {
@@ -114,7 +124,10 @@ export default function SettingsPage() {
 
     const handleRevokeScanner = async (id) => {
         try {
-            await fetch(`${getApiUrl()}/api/v1/scanners/${id}`, { method: 'DELETE' });
+            await fetch(`${getApiUrl()}/api/v1/scanners/${id}`, {
+                method: 'DELETE',
+                headers: authHeaders()
+            });
             fetchScanners();
         } catch (err) {
             console.error('Revoke error:', err);

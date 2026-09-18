@@ -27,7 +27,11 @@ export default function CreatorDashboard() {
             });
     };
 
-    useEffect(() => { fetchEvents(); }, []);
+    useEffect(() => {
+        fetchEvents();
+        const interval = setInterval(fetchEvents, 10000); // refresh every 10s so sales reflect without a manual reload
+        return () => clearInterval(interval);
+    }, []);
 
     const handleCreateEvent = async (e) => {
         e.preventDefault();

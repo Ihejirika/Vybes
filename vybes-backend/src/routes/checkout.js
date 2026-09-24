@@ -99,6 +99,35 @@ router.post('/initialize', async (req, res) => {
     }
 });
 
+// PUBLIC: the /success page polls this by the order reference from the
+// Paystack redirect URL. No auth — a buyer isn't logged in at this point,
+// and the reference itself is the only thing that gets you a result, same
+// trust level as a receipt lookup. Returns only order/ticket status, never
+// anything belonging to the host's account.
+router.get('/order/:reference', async (req, res) => {
+    const { reference } = req.params;
+    try {
+        const result = await db.query(
+            `SELECT o.id, o.status, o.buyer_email, o.total_amount, o.created_at,
+                    t.name AS tier_name, e.title AS event_title
+             FROM orders o
+             JOIN ticket_tiers t ON o.tier_id = t.id
+             JOIN events e ON t.event_id = e.id
+             WHERE o.id = $1`,
+            [reference]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ status: 'error', message: 'Order not found' });
+        }
+
+        res.status(200).json({ status: 'success', data: result.rows[0] });
+    } catch (error) {
+        console.error('Fetch order status error:', error);
+        res.status(500).json({ status: 'error', message: 'Failed to fetch order status' });
+    }
+});
+
 router.post('/webhook', async (req, res) => {
     const signature = req.headers['x-paystack-signature'];
     const payloadString = JSON.stringify(req.body);

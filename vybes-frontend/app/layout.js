@@ -5,6 +5,11 @@ import Footer from './components/footer';
 export const metadata = {
   title: 'Vybes | Ticketing Redefined',
   description: 'High-concurrency event ticketing platform.',
+  icons: {
+    icon: '/favicon.ico',
+    shortcut: '/favicon.ico',
+    apple: '/apple-touch-icon.png',
+  },
 };
 
 export default function RootLayout({ children }) {

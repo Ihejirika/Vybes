@@ -1,11 +1,11 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 const getApiUrl = () => process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
-export default function SuccessPage() {
+function SuccessContent() {
     const searchParams = useSearchParams();
     const reference = searchParams.get('reference') || searchParams.get('trxref');
 
@@ -91,17 +91,37 @@ export default function SuccessPage() {
     }[state];
 
     return (
-        <main className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6 text-center font-sans">
-            <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-3xl max-w-md w-full shadow-2xl">
-                <div className={`w-16 h-16 border rounded-full flex items-center justify-center mx-auto mb-4 text-3xl font-black ${content.iconClass}`}>
-                    {content.icon}
-                </div>
-                <h1 className="text-2xl font-black mb-2">{content.title}</h1>
-                <p className="text-zinc-400 text-sm mb-6">{content.message}</p>
-                <Link href="/" className="block w-full bg-white text-black font-bold py-3 rounded-xl text-sm hover:bg-zinc-200 transition">
-                    Back to Events
-                </Link>
+        <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-3xl max-w-md w-full shadow-2xl">
+            <div className={`w-16 h-16 border rounded-full flex items-center justify-center mx-auto mb-4 text-3xl font-black ${content.iconClass}`}>
+                {content.icon}
             </div>
+            <h1 className="text-2xl font-black mb-2">{content.title}</h1>
+            <p className="text-zinc-400 text-sm mb-6">{content.message}</p>
+            <Link href="/" className="block w-full bg-white text-black font-bold py-3 rounded-xl text-sm hover:bg-zinc-200 transition">
+                Back to Events
+            </Link>
+        </div>
+    );
+}
+
+function SuccessFallback() {
+    return (
+        <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-3xl max-w-md w-full shadow-2xl">
+            <div className="w-16 h-16 border rounded-full flex items-center justify-center mx-auto mb-4 text-3xl font-black bg-purple-500/10 border-purple-500/20 text-purple-400">
+                ⏳
+            </div>
+            <h1 className="text-2xl font-black mb-2">Loading...</h1>
+            <p className="text-zinc-400 text-sm mb-6">Preparing your payment confirmation.</p>
+        </div>
+    );
+}
+
+export default function SuccessPage() {
+    return (
+        <main className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6 text-center font-sans">
+            <Suspense fallback={<SuccessFallback />}>
+                <SuccessContent />
+            </Suspense>
         </main>
     );
 }

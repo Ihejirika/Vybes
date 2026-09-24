@@ -170,6 +170,29 @@ router.post('/webhook', async (req, res) => {
         }
     }
 
+    // Wallet withdrawals: Paystack fires these against the transfer_code we
+    // stored when /api/v1/payouts/withdraw initiated the transfer. Handled
+    // here rather than in payouts.js because Paystack only sends webhooks
+    // to the one URL configured on the account — this route is already it.
+    if (event.event === 'transfer.success' || event.event === 'transfer.failed' || event.event === 'transfer.reversed') {
+        const transferCode = event.data.transfer_code;
+        const newStatus = event.event === 'transfer.success' ? 'SUCCESS' : 'FAILED';
+        const failureReason = event.event !== 'transfer.success' ? (event.data.reason || event.data.gateway_response || null) : null;
+
+        try {
+            await db.query(
+                `UPDATE payouts
+                 SET status = $1,
+                     completed_at = CASE WHEN $1 = 'SUCCESS' THEN NOW() ELSE completed_at END,
+                     failure_reason = $2
+                 WHERE transfer_code = $3`,
+                [newStatus, failureReason, transferCode]
+            );
+        } catch (dbError) {
+            console.error('Database error updating payout from transfer webhook:', dbError);
+        }
+    }
+
     res.status(200).send('Webhook processed');
 });
 
